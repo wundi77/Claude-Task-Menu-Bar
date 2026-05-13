@@ -48,7 +48,7 @@ struct LoginItemToggle: View {
             Toggle("Beim Login automatisch starten", isOn: $isEnabled)
                 .toggleStyle(.checkbox)
                 .font(.system(size: 11))
-                .onChange(of: isEnabled) { _, newValue in
+                .onChange(of: isEnabled) { newValue in
                     do {
                         if newValue {
                             try SMAppService.mainApp.register()
