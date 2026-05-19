@@ -43,30 +43,49 @@ struct LoginItemToggle: View {
     @State private var isEnabled: Bool = (SMAppService.mainApp.status == .enabled)
     @State private var errorMessage: String?
 
+    // Nur aus /Programme heraus darf sich die App als Login-Item eintragen.
+    // Aus DerivedData/Debug heraus würde macOS ein Terminal öffnen.
+    private var isInstalledProperly: Bool {
+        let path = Bundle.main.bundlePath
+        return path.hasPrefix("/Applications") ||
+               path.hasPrefix("/Users/\(NSUserName())/Applications")
+    }
+
     var body: some View {
         HStack(spacing: 6) {
-            Toggle("Beim Login automatisch starten", isOn: $isEnabled)
-                .toggleStyle(.checkbox)
-                .font(.system(size: 11))
-                .onChange(of: isEnabled) { newValue in
-                    do {
-                        if newValue {
-                            try SMAppService.mainApp.register()
-                        } else {
-                            try SMAppService.mainApp.unregister()
-                        }
-                        errorMessage = nil
-                    } catch {
-                        isEnabled = !newValue
-                        errorMessage = error.localizedDescription
-                    }
-                }
-
-            if let msg = errorMessage {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.orange)
+            if isInstalledProperly {
+                Toggle("Beim Login automatisch starten", isOn: $isEnabled)
+                    .toggleStyle(.checkbox)
                     .font(.system(size: 11))
-                    .help(msg)
+                    .onChange(of: isEnabled) { newValue in
+                        do {
+                            if newValue {
+                                try SMAppService.mainApp.register()
+                            } else {
+                                try SMAppService.mainApp.unregister()
+                            }
+                            errorMessage = nil
+                        } catch {
+                            isEnabled = !newValue
+                            errorMessage = error.localizedDescription
+                        }
+                    }
+
+                if let msg = errorMessage {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                        .font(.system(size: 11))
+                        .help(msg)
+                }
+            } else {
+                HStack(spacing: 4) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                    Text("App in /Programme verschieben, um Autostart zu aktivieren")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
             }
         }
     }
