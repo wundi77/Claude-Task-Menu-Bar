@@ -47,6 +47,7 @@ struct LoginItemToggle: View {
     // Aus DerivedData/Debug heraus würde macOS ein Terminal öffnen.
     private var isInstalledProperly: Bool {
         let path = Bundle.main.bundlePath
+        guard path.hasSuffix(".app") else { return false }
         return path.hasPrefix("/Applications") ||
                path.hasPrefix("/Users/\(NSUserName())/Applications")
     }
