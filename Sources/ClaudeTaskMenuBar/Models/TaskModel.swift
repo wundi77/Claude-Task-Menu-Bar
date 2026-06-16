@@ -5,9 +5,17 @@ import UniformTypeIdentifiers
 // MARK: - Task
 
 struct Task: Identifiable, Codable, Hashable {
-    var id = UUID()
+    var id: UUID
     var title: String
     var column: Column
+    var notes: String
+
+    init(id: UUID = UUID(), title: String, column: Column, notes: String = "") {
+        self.id = id
+        self.title = title
+        self.column = column
+        self.notes = notes
+    }
 
     enum Column: String, CaseIterable, Codable, Hashable {
         case todo  = "ToDo"
@@ -35,6 +43,20 @@ struct Task: Identifiable, Codable, Hashable {
             case .done:  return "columnDone"
             }
         }
+    }
+
+    // Custom decoding so existing saved tasks without a "notes" field
+    // (from before this feature existed) still load correctly.
+    enum CodingKeys: String, CodingKey {
+        case id, title, column, notes
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        column = try container.decode(Column.self, forKey: .column)
+        notes = try container.decodeIfPresent(String.self, forKey: .notes) ?? ""
     }
 }
 
@@ -77,6 +99,12 @@ final class TaskStore: ObservableObject {
     func move(_ task: Task, to column: Task.Column) {
         guard let idx = tasks.firstIndex(where: { $0.id == task.id }) else { return }
         tasks[idx].column = column
+        save()
+    }
+
+    func updateNotes(_ task: Task, notes: String) {
+        guard let idx = tasks.firstIndex(where: { $0.id == task.id }) else { return }
+        tasks[idx].notes = notes
         save()
     }
 
