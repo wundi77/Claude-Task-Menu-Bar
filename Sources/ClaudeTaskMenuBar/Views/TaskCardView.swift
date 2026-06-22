@@ -6,17 +6,16 @@ struct TaskCardView: View {
     @State private var isHovered = false
     @State private var isEditingNotes = false
     @State private var notesDraft = ""
+    @State private var isEditingTitle = false
+    @State private var titleDraft = ""
+    @FocusState private var isTitleFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top, spacing: 8) {
-                Text(task.title)
-                    .font(.system(size: 13))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .lineLimit(4)
+                titleArea
 
-                if isHovered && !isEditingNotes {
+                if isHovered && !isEditingNotes && !isEditingTitle {
                     controls
                         .transition(.opacity)
                 }
@@ -50,7 +49,38 @@ struct TaskCardView: View {
         }
     }
 
-    // MARK: - Controls (erscheinen beim Hover)
+    // MARK: - Titelbereich
+
+    @ViewBuilder
+    private var titleArea: some View {
+        if isEditingTitle {
+            TextField("Aufgabenname", text: $titleDraft)
+                .font(.system(size: 13))
+                .textFieldStyle(.plain)
+                .focused($isTitleFocused)
+                .onAppear { isTitleFocused = true }
+                .onSubmit { saveTitleEdit() }
+                .onExitCommand { isEditingTitle = false }
+                .frame(maxWidth: .infinity)
+        } else {
+            Text(task.title)
+                .font(.system(size: 13))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(4)
+                .textSelection(.enabled)
+        }
+    }
+
+    private func saveTitleEdit() {
+        let trimmed = titleDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            store.updateTitle(task, title: trimmed)
+        }
+        isEditingTitle = false
+    }
+
+    // MARK: - Controls (Hover)
 
     private var controls: some View {
         VStack(spacing: 4) {
@@ -64,6 +94,16 @@ struct TaskCardView: View {
                 .buttonStyle(IconButtonStyle(color: .blue))
                 .help("Nach \(prev.rawValue) verschieben")
             }
+
+            Button {
+                titleDraft = task.title
+                withAnimation { isEditingTitle = true }
+            } label: {
+                Image(systemName: "pencil")
+                    .font(.system(size: 10, weight: .semibold))
+            }
+            .buttonStyle(IconButtonStyle(color: .gray))
+            .help("Titel bearbeiten")
 
             Button {
                 notesDraft = task.notes
@@ -147,6 +187,10 @@ struct TaskCardView: View {
 
     @ViewBuilder
     private var contextMenuItems: some View {
+        Button("Titel bearbeiten") {
+            titleDraft = task.title
+            withAnimation { isEditingTitle = true }
+        }
         Button(task.notes.isEmpty ? "Notiz hinzufügen" : "Notiz bearbeiten") {
             notesDraft = task.notes
             withAnimation { isEditingNotes = true }

@@ -102,6 +102,12 @@ final class TaskStore: ObservableObject {
         save()
     }
 
+    func updateTitle(_ task: Task, title: String) {
+        guard let idx = tasks.firstIndex(where: { $0.id == task.id }) else { return }
+        tasks[idx].title = title
+        save()
+    }
+
     func updateNotes(_ task: Task, notes: String) {
         guard let idx = tasks.firstIndex(where: { $0.id == task.id }) else { return }
         tasks[idx].notes = notes

@@ -76,7 +76,7 @@ struct ColumnView: View {
     }
 
     private var taskList: some View {
-        ScrollView(.vertical, showsIndicators: false) {
+        ScrollView(.vertical, showsIndicators: true) {
             LazyVStack(spacing: 6) {
                 if isAddingTask {
                     AddTaskView(column: column, isPresented: $isAddingTask)
