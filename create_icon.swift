@@ -1,100 +1,91 @@
 #!/usr/bin/env swift
-// Generates AppIcon_1024.png — a modern Apple-style Kanban board icon.
-// Run via: swift create_icon.swift
-import AppKit
+// Generates AppIcon_1024.png using CGContext (no display required).
+import CoreGraphics
+import ImageIO
+import Foundation
 
 let size = 1024
-let s = CGFloat(size)
+let s    = CGFloat(size)
 
-let image = NSImage(size: NSSize(width: size, height: size))
-image.lockFocus()
-defer { image.unlockFocus() }
+let space = CGColorSpaceCreateDeviceRGB()
+guard let ctx = CGContext(
+    data: nil,
+    width: size, height: size,
+    bitsPerComponent: 8,
+    bytesPerRow: size * 4,
+    space: space,
+    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+) else {
+    fputs("❌ CGContext konnte nicht erstellt werden\n", stderr)
+    exit(1)
+}
 
-guard let ctx = NSGraphicsContext.current?.cgContext else { exit(1) }
-
-// ── Background: rounded square with blue-to-indigo gradient ──────────────────
-let radius = s * 0.22
-let bgPath = CGPath(roundedRect: CGRect(x: 0, y: 0, width: size, height: size),
-                    cornerWidth: radius, cornerHeight: radius, transform: nil)
+// ── Rounded-rect clip (Apple-Stil) ────────────────────────────────────────────
+let radius  = s * 0.22
+let bgRect  = CGRect(x: 0, y: 0, width: s, height: s)
+let bgPath  = CGPath(roundedRect: bgRect, cornerWidth: radius, cornerHeight: radius, transform: nil)
 ctx.addPath(bgPath)
 ctx.clip()
 
-let space  = CGColorSpaceCreateDeviceRGB()
-let colors = [CGColor(red: 0.14, green: 0.38, blue: 0.92, alpha: 1.0),
-              CGColor(red: 0.40, green: 0.12, blue: 0.80, alpha: 1.0)] as CFArray
+// ── Blau-Indigo-Verlauf ───────────────────────────────────────────────────────
+let gradColors = [CGColor(colorSpace: space, components: [0.14, 0.38, 0.92, 1.0])!,
+                  CGColor(colorSpace: space, components: [0.40, 0.12, 0.80, 1.0])!] as CFArray
 let locs: [CGFloat] = [0.0, 1.0]
-let gradient = CGGradient(colorsSpace: space, colors: colors, locations: locs)!
+let gradient = CGGradient(colorsSpace: space, colors: gradColors, locations: locs)!
 ctx.drawLinearGradient(gradient,
-                       start: CGPoint(x: 0,    y: s),
-                       end:   CGPoint(x: s,    y: 0),
+                       start: CGPoint(x: 0, y: s),
+                       end:   CGPoint(x: s, y: 0),
                        options: [])
 
-// ── Column helper ─────────────────────────────────────────────────────────────
-func drawColumn(x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat,
-                alpha: CGFloat, ctx: CGContext) {
-    let cr = s * 0.045
-    let rect = CGRect(x: x, y: y, width: w, height: h)
+// ── Hilfsfunktionen ───────────────────────────────────────────────────────────
+func fillRoundedRect(_ rect: CGRect, cornerRadius cr: CGFloat, alpha: CGFloat) {
     let p = CGPath(roundedRect: rect, cornerWidth: cr, cornerHeight: cr, transform: nil)
-    ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: alpha))
+    ctx.setFillColor(CGColor(colorSpace: space, components: [1, 1, 1, alpha])!)
     ctx.addPath(p)
     ctx.fillPath()
 }
 
-// ── Card helper ───────────────────────────────────────────────────────────────
-func drawCard(x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat,
-              alpha: CGFloat, ctx: CGContext) {
-    let cr = s * 0.025
-    let rect = CGRect(x: x, y: y, width: w, height: h)
-    let p = CGPath(roundedRect: rect, cornerWidth: cr, cornerHeight: cr, transform: nil)
-    ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: alpha))
-    ctx.addPath(p)
-    ctx.fillPath()
-}
-
-// ── Layout constants ──────────────────────────────────────────────────────────
+// ── Kanban-Spalten ────────────────────────────────────────────────────────────
 let colW:  CGFloat = s * 0.20
 let gapX:  CGFloat = s * 0.065
 let baseY: CGFloat = s * 0.15
-let topY:  CGFloat = s * 0.82    // columns grow upward (macOS coord)
+let colCR: CGFloat = s * 0.045
 
 let x1 = s * 0.115
 let x2 = x1 + colW + gapX
 let x3 = x2 + colW + gapX
 
-// Column heights (ToDo tallest, Done shortest)
-let h1: CGFloat = s * 0.67
-let h2: CGFloat = s * 0.50
-let h3: CGFloat = s * 0.33
+fillRoundedRect(CGRect(x: x1, y: baseY, width: colW, height: s * 0.67), cornerRadius: colCR, alpha: 0.18)
+fillRoundedRect(CGRect(x: x2, y: baseY, width: colW, height: s * 0.50), cornerRadius: colCR, alpha: 0.18)
+fillRoundedRect(CGRect(x: x3, y: baseY, width: colW, height: s * 0.33), cornerRadius: colCR, alpha: 0.18)
 
-drawColumn(x: x1, y: baseY,       w: colW, h: h1, alpha: 0.18, ctx: ctx)
-drawColumn(x: x2, y: baseY,       w: colW, h: h2, alpha: 0.18, ctx: ctx)
-drawColumn(x: x3, y: baseY,       w: colW, h: h3, alpha: 0.18, ctx: ctx)
-
-// ── Cards inside columns ──────────────────────────────────────────────────────
+// ── Karten in den Spalten ─────────────────────────────────────────────────────
 let cardW  = colW  - s * 0.04
 let cardH  = s * 0.09
-let cardX1 = x1 + s * 0.02
-let cardX2 = x2 + s * 0.02
-let cardX3 = x3 + s * 0.02
+let cardCR = s * 0.025
 let padY   = s * 0.04
 let stepY  = cardH + s * 0.028
 
-// Column 1: 3 cards
-drawCard(x: cardX1, y: baseY + padY + stepY * 2, w: cardW, h: cardH, alpha: 0.90, ctx: ctx)
-drawCard(x: cardX1, y: baseY + padY + stepY * 1, w: cardW, h: cardH, alpha: 0.72, ctx: ctx)
-drawCard(x: cardX1, y: baseY + padY + stepY * 0, w: cardW, h: cardH, alpha: 0.55, ctx: ctx)
+let cx1 = x1 + s * 0.02
+let cx2 = x2 + s * 0.02
+let cx3 = x3 + s * 0.02
 
-// Column 2: 2 cards
-drawCard(x: cardX2, y: baseY + padY + stepY * 1, w: cardW, h: cardH, alpha: 0.90, ctx: ctx)
-drawCard(x: cardX2, y: baseY + padY + stepY * 0, w: cardW, h: cardH, alpha: 0.68, ctx: ctx)
+// Spalte 1: 3 Karten
+fillRoundedRect(CGRect(x: cx1, y: baseY + padY + stepY * 2, width: cardW, height: cardH), cornerRadius: cardCR, alpha: 0.90)
+fillRoundedRect(CGRect(x: cx1, y: baseY + padY + stepY * 1, width: cardW, height: cardH), cornerRadius: cardCR, alpha: 0.72)
+fillRoundedRect(CGRect(x: cx1, y: baseY + padY + stepY * 0, width: cardW, height: cardH), cornerRadius: cardCR, alpha: 0.55)
 
-// Column 3: 1 card
-drawCard(x: cardX3, y: baseY + padY + stepY * 0, w: cardW, h: cardH, alpha: 0.90, ctx: ctx)
+// Spalte 2: 2 Karten
+fillRoundedRect(CGRect(x: cx2, y: baseY + padY + stepY * 1, width: cardW, height: cardH), cornerRadius: cardCR, alpha: 0.90)
+fillRoundedRect(CGRect(x: cx2, y: baseY + padY + stepY * 0, width: cardW, height: cardH), cornerRadius: cardCR, alpha: 0.68)
 
-// ── Subtle shine at top ───────────────────────────────────────────────────────
-let shineColors = [CGColor(red: 1, green: 1, blue: 1, alpha: 0.18),
-                   CGColor(red: 1, green: 1, blue: 1, alpha: 0.00)] as CFArray
-let shineGrad = CGGradient(colorsSpace: space, colors: shineColors, locations: [0, 1])!
+// Spalte 3: 1 Karte
+fillRoundedRect(CGRect(x: cx3, y: baseY + padY + stepY * 0, width: cardW, height: cardH), cornerRadius: cardCR, alpha: 0.90)
+
+// ── Glanz-Effekt oben ─────────────────────────────────────────────────────────
+let shineColors = [CGColor(colorSpace: space, components: [1, 1, 1, 0.18])!,
+                   CGColor(colorSpace: space, components: [1, 1, 1, 0.00])!] as CFArray
+let shineGrad = CGGradient(colorsSpace: space, colors: shineColors, locations: [0.0, 1.0])!
 ctx.saveGState()
 ctx.addPath(bgPath)
 ctx.clip()
@@ -104,11 +95,21 @@ ctx.drawLinearGradient(shineGrad,
                        options: [])
 ctx.restoreGState()
 
-// ── Export PNG ────────────────────────────────────────────────────────────────
-guard let tiff = image.tiffRepresentation,
-      let rep  = NSBitmapImageRep(data: tiff),
-      let png  = rep.representation(using: .png, properties: [:]) else { exit(1) }
+// ── PNG exportieren ───────────────────────────────────────────────────────────
+guard let cgImage = ctx.makeImage() else {
+    fputs("❌ CGImage konnte nicht erstellt werden\n", stderr)
+    exit(1)
+}
 
-let url = URL(fileURLWithPath: "AppIcon_1024.png")
-try! png.write(to: url)
+let outURL = URL(fileURLWithPath: "AppIcon_1024.png")
+guard let dest = CGImageDestinationCreateWithURL(outURL as CFURL, "public.png" as CFString, 1, nil) else {
+    fputs("❌ CGImageDestination konnte nicht erstellt werden\n", stderr)
+    exit(1)
+}
+CGImageDestinationAddImage(dest, cgImage, nil)
+guard CGImageDestinationFinalize(dest) else {
+    fputs("❌ PNG konnte nicht geschrieben werden\n", stderr)
+    exit(1)
+}
+
 print("✅ AppIcon_1024.png erstellt (\(size)×\(size) px)")
