@@ -13,6 +13,33 @@ if [ ! -f "$EXECUTABLE" ]; then
     exit 1
 fi
 
+# ── App-Icon generieren ────────────────────────────────────────────────────────
+echo "🎨 Generiere App-Icon ..."
+swift create_icon.swift
+
+ICONSET="AppIcon.iconset"
+rm -rf "$ICONSET"
+mkdir "$ICONSET"
+
+# Alle macOS-Standard-Größen via sips erzeugen
+for SIZE in 16 32 64 128 256 512 1024; do
+    sips -z $SIZE $SIZE AppIcon_1024.png \
+        --out "$ICONSET/icon_${SIZE}x${SIZE}.png" > /dev/null
+done
+
+# @2x-Varianten
+for SIZE in 16 32 64 128 256 512; do
+    DOUBLE=$((SIZE * 2))
+    cp "$ICONSET/icon_${DOUBLE}x${DOUBLE}.png" \
+       "$ICONSET/icon_${SIZE}x${SIZE}@2x.png"
+done
+
+# .icns erzeugen
+iconutil -c icns "$ICONSET" -o AppIcon.icns
+rm -rf "$ICONSET" AppIcon_1024.png
+echo "✅ AppIcon.icns erstellt"
+
+# ── App-Bundle zusammenbauen ───────────────────────────────────────────────────
 APP_BUNDLE="$APP_NAME.app"
 echo "📦 Erstelle App-Bundle ..."
 
@@ -20,7 +47,9 @@ rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 
-cp "$EXECUTABLE" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
+cp "$EXECUTABLE"  "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
+cp AppIcon.icns   "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
+rm -f AppIcon.icns
 
 cat > "$APP_BUNDLE/Contents/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -41,6 +70,8 @@ cat > "$APP_BUNDLE/Contents/Info.plist" << PLIST
     <string>1.0</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>LSUIElement</key>
     <true/>
     <key>NSPrincipalClass</key>
@@ -57,7 +88,7 @@ echo "🔏 Signiere App (ad-hoc) ..."
 codesign --force --deep --sign - "$APP_BUNDLE"
 
 echo ""
-echo "✅ $APP_BUNDLE wurde erstellt!"
+echo "✅ $APP_BUNDLE wurde erstellt (inkl. App-Icon)!"
 echo ""
 echo "Nächste Schritte:"
 echo "  1. Alten Eintrag entfernen: Systemeinstellungen → Allgemein → Startobjekte"

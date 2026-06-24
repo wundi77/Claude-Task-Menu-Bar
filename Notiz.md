@@ -1,7 +1,7 @@
 # Projektnotiz — Claude Task Menu Bar
 
 **Letzter Stand:** Juni 2026  
-**Branch:** `claude/mac-menubar-task-board-zb11y`  
+**Branch:** `claude/compassionate-thompson-ng7mhv`  
 **Repo:** `https://github.com/wundi77/claude-task-menu-bar`
 
 ---
@@ -30,6 +30,7 @@ Eine native macOS-App, die ausschließlich in der Menüleiste lebt (kein Dock-Ic
 | Kartentitel kopieren (Textauswahl aktiv) | ✅ |
 | Datenpersistenz via UserDefaults | ✅ |
 | Kein Terminal-Fenster beim Autostart | ✅ |
+| Modernes App-Icon (Apple-Stil, Kanban-Design) | ✅ |
 
 ---
 
@@ -48,6 +49,7 @@ SPM baut einen Unix-CLI-Prozess, keine `.app`-Datei. Für den Betrieb als echte 
 Claude-Task-Menu-Bar/
 ├── Package.swift
 ├── build-app.sh                          ← App-Bundle Builder (wichtig!)
+├── create_icon.swift                     ← Icon-Generator (Core Graphics)
 ├── README.md
 ├── Notiz.md                              ← diese Datei
 └── Sources/ClaudeTaskMenuBar/
@@ -70,6 +72,23 @@ Claude-Task-Menu-Bar/
 - `UserDefaults` — Datenspeicherung, Key: `com.claude.taskmenbar.tasks`
 - `LSUIElement = true` in Info.plist — verhindert Terminal beim Autostart
 - `codesign --force --deep --sign -` — Ad-hoc-Signierung
+- `CFBundleIconFile = AppIcon` in Info.plist — App-Icon
+
+### App-Icon (create_icon.swift)
+
+Das Icon wird beim Build automatisch von `build-app.sh` generiert:
+
+1. `swift create_icon.swift` → erzeugt `AppIcon_1024.png` via Core Graphics / AppKit
+2. `sips` → skaliert auf alle macOS-Standardgrößen (16–1024 px, inkl. @2x)
+3. `iconutil` → konvertiert `AppIcon.iconset/` → `AppIcon.icns`
+4. `.icns` wird in `Contents/Resources/` des Bundles kopiert
+
+**Icon-Design:**
+- Abgerundetes Quadrat (Apple-Stil, Radius ≈ 22 % der Breite)
+- Blau-Indigo-Verlauf (diagonaler Gradient von oben-links nach unten-rechts)
+- Drei weiße Kanban-Spalten mit abgestuften Höhen (ToDo > Doing > Done)
+- Weiße Karten in jeder Spalte mit transparenter Abstufung
+- Subtiler Glanz-Effekt oben (weißer Gradient)
 
 ### Backward-Compatibility
 
@@ -83,11 +102,11 @@ Das `notes`-Feld im Task-Struct hat einen Custom-Decoder mit `decodeIfPresent`, 
 
 ```bash
 # 1. Repository klonen
-git clone -b claude/mac-menubar-task-board-zb11y \
+git clone -b claude/compassionate-thompson-ng7mhv \
   https://github.com/wundi77/claude-task-menu-bar.git
 cd claude-task-menu-bar
 
-# 2. App bauen
+# 2. App bauen (inkl. Icon-Generierung)
 chmod +x build-app.sh
 ./build-app.sh
 
@@ -101,12 +120,11 @@ open /Applications/ClaudeTaskMenuBar.app
 ### Update (Repository bereits geklont)
 
 ```bash
-cd claude-task-menu-bar   # oder wo auch immer der Ordner liegt
+cd claude-task-menu-bar
 git pull
 ./build-app.sh
 rm -rf /Applications/ClaudeTaskMenuBar.app
 cp -r ClaudeTaskMenuBar.app /Applications/
-# Laufende App beenden und neu starten
 open /Applications/ClaudeTaskMenuBar.app
 ```
 
@@ -145,3 +163,5 @@ open /Applications/ClaudeTaskMenuBar.app
 | `d5de4ce` | `build-app.sh` — erzeugt echtes .app-Bundle mit LSUIElement |
 | `1e0ea97` | Notizfeld pro Karte — hinzufügen/bearbeiten/löschen |
 | `3b1efeb` | Scrollbalken in Spalten; Titel bearbeitbar/kopierbar |
+| `4fffe6c` | Notiz.md mit vollständigem Projektstand hinzugefügt |
+| aktuell   | App-Icon: create_icon.swift + build-app.sh erweitert |

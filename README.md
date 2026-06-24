@@ -18,11 +18,24 @@ Eine native macOS Menu-Bar-App im Trello-Stil — kein Dock-Icon, lebt nur in de
 ## Anforderungen
 
 - macOS 13 Ventura oder neuer
-- Xcode 15 oder neuer
+- Xcode 15 oder neuer (bzw. Xcode Command Line Tools)
 
 ## Installation & Start
 
-### Option 1 — Xcode (empfohlen)
+### Option 1 — Kommandozeile (empfohlen, inkl. App-Icon)
+
+```bash
+git clone https://github.com/wundi77/claude-task-menu-bar.git
+cd claude-task-menu-bar
+chmod +x build-app.sh
+./build-app.sh
+cp -r ClaudeTaskMenuBar.app /Applications/
+open /Applications/ClaudeTaskMenuBar.app
+```
+
+Das Skript kompiliert die App, generiert automatisch ein modernes App-Icon und erstellt ein vollständiges `.app`-Bundle.
+
+### Option 2 — Xcode
 
 1. Repository klonen:
    ```bash
@@ -36,25 +49,39 @@ Eine native macOS Menu-Bar-App im Trello-Stil — kein Dock-Icon, lebt nur in de
 3. Target **ClaudeTaskMenuBar** auswählen, **My Mac** als Ziel wählen
 4. **Run** (⌘R) drücken
 
-### Option 2 — Kommandozeile
+> **Hinweis:** Beim ersten Start fragt macOS nach Berechtigungen. Einfach bestätigen.
+
+## Update
 
 ```bash
-swift run
+cd claude-task-menu-bar
+git pull
+./build-app.sh
+rm -rf /Applications/ClaudeTaskMenuBar.app
+cp -r ClaudeTaskMenuBar.app /Applications/
+open /Applications/ClaudeTaskMenuBar.app
 ```
-
-> **Hinweis:** Beim ersten Start fragt macOS nach Berechtigungen. Einfach bestätigen.
 
 ## Bedienung
 
 | Aktion | Methode |
 |---|---|
-| Board öffnen | Klick auf das Checklisten-Symbol in der Menüleiste |
+| Board öffnen | Klick auf das Symbol in der Menüleiste |
 | Aufgabe hinzufügen | **+** in der Spaltenüberschrift |
 | Aufgabe löschen | Hover über Karte → 🗑 |
 | Aufgabe verschieben | Hover über Karte → ← / → **oder** Drag & Drop zwischen Spalten |
+| Titel bearbeiten | Hover über Karte → Bleistift-Icon **oder** Rechtsklick → Bearbeiten |
+| Notiz bearbeiten | Karte aufklappen → Notizfeld anklicken |
 | Kontextmenü | Rechtsklick auf eine Karte |
 | Hinzufügen abbrechen | `Escape` |
 | Hinzufügen bestätigen | `Return` (einzelne Zeile) / `⌘Return` (mehrzeilig) |
+
+## App-Icon
+
+Das Icon wird beim Build automatisch generiert (`create_icon.swift`):
+- Modernes, abgerundetes Quadrat im Apple-Stil
+- Blau-Indigo-Verlauf
+- Drei weiße Kanban-Spalten mit Karten
 
 ## Datenspeicherung
 
