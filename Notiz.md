@@ -1,7 +1,7 @@
 # Projektnotiz — Claude Task Menu Bar
 
 **Letzter Stand:** Juni 2026  
-**Branch:** `claude/compassionate-thompson-ng7mhv`  
+**Branch:** `main`  
 **Repo:** `https://github.com/wundi77/claude-task-menu-bar`
 
 ---
@@ -19,9 +19,9 @@ Eine native macOS-App, die ausschließlich in der Menüleiste lebt (kein Dock-Ic
 | Menüleisten-App ohne Dock-Icon | ✅ |
 | 3 Spalten: ToDo / Doing / Done | ✅ |
 | Aufgabe hinzufügen (+ Button) | ✅ |
-| Aufgabe löschen (Hover → Papierkorb) | ✅ |
-| Aufgabe zwischen Spalten verschieben (Hover-Pfeile) | ✅ |
-| Drag & Drop zwischen Spalten | ✅ |
+| Aufgabe löschen (Papierkorb-Icon auf Karte) | ✅ |
+| Aufgabe zwischen Spalten verschieben (Drag & Drop) | ✅ |
+| Aufgabe verschieben via Rechtsklick-Kontextmenü | ✅ |
 | Rechtsklick-Kontextmenü pro Karte | ✅ |
 | Autostart beim Login (Checkbox im Footer) | ✅ |
 | Notizfeld pro Karte (hinzufügen/bearbeiten/löschen) | ✅ |
@@ -31,6 +31,8 @@ Eine native macOS-App, die ausschließlich in der Menüleiste lebt (kein Dock-Ic
 | Datenpersistenz via UserDefaults | ✅ |
 | Kein Terminal-Fenster beim Autostart | ✅ |
 | Modernes App-Icon (Apple-Stil, Kanban-Design) | ✅ |
+| Dynamische Fensterhöhe (längste Spalte, max. 50% Screen) | ✅ |
+| Karten-Icons immer sichtbar, keine Höhensprünge beim Hover | ✅ |
 
 ---
 
@@ -50,6 +52,7 @@ Claude-Task-Menu-Bar/
 ├── Package.swift
 ├── build-app.sh                          ← App-Bundle Builder (wichtig!)
 ├── create_icon.swift                     ← Icon-Generator (Core Graphics)
+├── CLAUDE.md                             ← Projektregeln für KI-Assistenten
 ├── README.md
 ├── Notiz.md                              ← diese Datei
 └── Sources/ClaudeTaskMenuBar/
@@ -57,9 +60,9 @@ Claude-Task-Menu-Bar/
     ├── Models/
     │   └── TaskModel.swift               ← Task-Struct + TaskStore
     └── Views/
-        ├── TaskBoardView.swift           ← Board + LoginItemToggle
+        ├── TaskBoardView.swift           ← Board + dynamische Höhe + Footer
         ├── ColumnView.swift              ← Spalte mit Scrollview + Drag-Drop
-        ├── TaskCardView.swift            ← Karte mit Hover-Controls + Inline-Editing
+        ├── TaskCardView.swift            ← Karte mit immer sichtbaren Icons
         └── AddTaskView.swift             ← Eingabeformular neue Aufgabe
 ```
 
@@ -73,22 +76,30 @@ Claude-Task-Menu-Bar/
 - `LSUIElement = true` in Info.plist — verhindert Terminal beim Autostart
 - `codesign --force --deep --sign -` — Ad-hoc-Signierung
 - `CFBundleIconFile = AppIcon` in Info.plist — App-Icon
+- `NSScreen.main?.visibleFrame.height` — dynamische Fensterhöhe
+
+### Karten-Layout (TaskCardView)
+
+Die drei Icons (Bleistift, Notiz, Papierkorb) sind **immer sichtbar** in einem kompakten `HStack` rechts neben dem Titel. Sie reagieren nur mit Opacity auf Hover (gedimmt → kräftig), die Kartenhöhe bleibt dabei konstant. Pfeil-Buttons zum Verschieben wurden entfernt — das Verschieben funktioniert per Drag & Drop und Rechtsklick-Menü.
+
+### Dynamische Fensterhöhe (TaskBoardView)
+
+```swift
+private var boardHeight: CGFloat {
+    let maxCards = Task.Column.allCases.map { store.tasks(in: $0).count }.max() ?? 0
+    // headerH(38) + maxCards * cardH(42) + colPad(20) + footerH(36)
+    let ideal = 38 + CGFloat(maxCards) * 42 + 20 + 36
+    let screenH = NSScreen.main?.visibleFrame.height ?? 800
+    return min(max(ideal, 160), screenH * 0.5)
+}
+```
 
 ### App-Icon (create_icon.swift)
 
-Das Icon wird beim Build automatisch von `build-app.sh` generiert:
-
-1. `swift create_icon.swift` → erzeugt `AppIcon_1024.png` via Core Graphics / AppKit
-2. `sips` → skaliert auf alle macOS-Standardgrößen (16–1024 px, inkl. @2x)
-3. `iconutil` → konvertiert `AppIcon.iconset/` → `AppIcon.icns`
-4. `.icns` wird in `Contents/Resources/` des Bundles kopiert
-
-**Icon-Design:**
-- Abgerundetes Quadrat (Apple-Stil, Radius ≈ 22 % der Breite)
-- Blau-Indigo-Verlauf (diagonaler Gradient von oben-links nach unten-rechts)
-- Drei weiße Kanban-Spalten mit abgestuften Höhen (ToDo > Doing > Done)
-- Weiße Karten in jeder Spalte mit transparenter Abstufung
-- Subtiler Glanz-Effekt oben (weißer Gradient)
+1. `swift create_icon.swift` → `AppIcon_1024.png` via `CGContext` (kein Display nötig)
+2. `sips` → alle Größen (16–1024 px, inkl. @2x)
+3. `iconutil` → `AppIcon.icns`
+4. `.icns` in `Contents/Resources/`, `CFBundleIconFile` in `Info.plist`
 
 ### Backward-Compatibility
 
@@ -101,19 +112,11 @@ Das `notes`-Feld im Task-Struct hat einen Custom-Decoder mit `decodeIfPresent`, 
 ### Erster Start (neuer Rechner)
 
 ```bash
-# 1. Repository klonen
-git clone -b claude/compassionate-thompson-ng7mhv \
-  https://github.com/wundi77/claude-task-menu-bar.git
+git clone https://github.com/wundi77/claude-task-menu-bar.git
 cd claude-task-menu-bar
-
-# 2. App bauen (inkl. Icon-Generierung)
 chmod +x build-app.sh
 ./build-app.sh
-
-# 3. In /Programme verschieben
 cp -r ClaudeTaskMenuBar.app /Applications/
-
-# 4. Starten
 open /Applications/ClaudeTaskMenuBar.app
 ```
 
@@ -137,17 +140,10 @@ open /Applications/ClaudeTaskMenuBar.app
 
 ## Bekannte Einschränkungen / offene Punkte
 
-1. **Bilder als Anhang** — noch nicht umgesetzt. Wäre möglich via:
-   - Datei-Picker (`.fileImporter`)
-   - Speicherung in `~/Library/Application Support/com.claude.taskmenbar/attachments/`
-   - Thumbnail-Vorschau in der Karte
-   - Cleanup beim Löschen einer Karte
-
-2. **Autostart-Checkbox** — funktioniert nur, wenn die App aus `/Applications` als `.app`-Bundle läuft. Läuft sie aus einem anderen Pfad oder als roher Unix-Prozess, zeigt der Footer stattdessen einen Hinweis.
-
-3. **Alte Login-Item-Einträge** — falls die App früher mal als Unix-Prozess (z. B. aus Xcode heraus) als Login-Item registriert wurde, muss der alte Eintrag manuell entfernt werden: **Systemeinstellungen → Allgemein → Startobjekte**.
-
-4. **Fenstergröße** — aktuell fest auf 720×490 px kodiert in `TaskBoardView.swift` (`.frame(width: 720, height: 490)`).
+1. **Bilder als Anhang** — noch nicht umgesetzt.
+2. **Autostart-Checkbox** — funktioniert nur aus `/Applications` als `.app`-Bundle.
+3. **Alte Login-Item-Einträge** — ggf. manuell entfernen: Systemeinstellungen → Allgemein → Startobjekte.
+4. **Kartenhöhe bei mehrzeiligen Titeln** — `boardHeight` nutzt einen festen Schätzwert (42 px/Karte); bei vielen langen Titeln kann das Fenster etwas zu niedrig sein. Der Scrollbalken greift dann automatisch.
 
 ---
 
@@ -164,4 +160,6 @@ open /Applications/ClaudeTaskMenuBar.app
 | `1e0ea97` | Notizfeld pro Karte — hinzufügen/bearbeiten/löschen |
 | `3b1efeb` | Scrollbalken in Spalten; Titel bearbeitbar/kopierbar |
 | `4fffe6c` | Notiz.md mit vollständigem Projektstand hinzugefügt |
-| aktuell   | App-Icon: create_icon.swift + build-app.sh erweitert |
+| `3d73619` | App-Icon: create_icon.swift + build-app.sh erweitert |
+| `c39b338` | Bugfix Icon-Generator: CGContext statt NSImage.lockFocus |
+| aktuell   | Dynamische Fensterhöhe; Icons immer sichtbar; CLAUDE.md |

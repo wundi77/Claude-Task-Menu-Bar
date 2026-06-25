@@ -11,14 +11,10 @@ struct TaskCardView: View {
     @FocusState private var isTitleFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .top, spacing: 8) {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .center, spacing: 6) {
                 titleArea
-
-                if isHovered && !isEditingNotes && !isEditingTitle {
-                    controls
-                        .transition(.opacity)
-                }
+                iconControls
             }
 
             if !task.notes.isEmpty && !isEditingNotes {
@@ -33,7 +29,8 @@ struct TaskCardView: View {
                 notesEditor
             }
         }
-        .padding(10)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
         .background(
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color(NSColor.controlBackgroundColor))
@@ -41,12 +38,9 @@ struct TaskCardView: View {
                         radius: isHovered ? 4 : 2,
                         x: 0, y: isHovered ? 2 : 1)
         )
-        .animation(.easeInOut(duration: 0.12), value: isHovered)
         .onHover { isHovered = $0 }
         .draggable(task)
-        .contextMenu {
-            contextMenuItems
-        }
+        .contextMenu { contextMenuItems }
     }
 
     // MARK: - Titelbereich
@@ -74,67 +68,44 @@ struct TaskCardView: View {
 
     private func saveTitleEdit() {
         let trimmed = titleDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty {
-            store.updateTitle(task, title: trimmed)
-        }
+        if !trimmed.isEmpty { store.updateTitle(task, title: trimmed) }
         isEditingTitle = false
     }
 
-    // MARK: - Controls (Hover)
+    // MARK: - Icons (immer sichtbar, kompakt)
 
-    private var controls: some View {
-        VStack(spacing: 4) {
-            if let prev = task.column.previous {
-                Button {
-                    withAnimation { store.move(task, to: prev) }
-                } label: {
-                    Image(systemName: "arrow.left")
-                        .font(.system(size: 10, weight: .semibold))
-                }
-                .buttonStyle(IconButtonStyle(color: .blue))
-                .help("Nach \(prev.rawValue) verschieben")
-            }
-
+    private var iconControls: some View {
+        HStack(spacing: 3) {
+            // Titel bearbeiten
             Button {
                 titleDraft = task.title
                 withAnimation { isEditingTitle = true }
             } label: {
                 Image(systemName: "pencil")
-                    .font(.system(size: 10, weight: .semibold))
             }
-            .buttonStyle(IconButtonStyle(color: .gray))
+            .buttonStyle(CardIconButtonStyle(color: .gray, isHovered: isHovered))
             .help("Titel bearbeiten")
 
+            // Notiz bearbeiten / hinzufügen
             Button {
                 notesDraft = task.notes
                 withAnimation { isEditingNotes = true }
             } label: {
                 Image(systemName: task.notes.isEmpty ? "note.text.badge.plus" : "note.text")
-                    .font(.system(size: 10, weight: .semibold))
             }
-            .buttonStyle(IconButtonStyle(color: .purple))
+            .buttonStyle(CardIconButtonStyle(color: .purple, isHovered: isHovered))
             .help(task.notes.isEmpty ? "Notiz hinzufügen" : "Notiz bearbeiten")
 
+            // Löschen
             Button {
                 withAnimation { store.delete(task) }
             } label: {
                 Image(systemName: "trash")
-                    .font(.system(size: 10, weight: .semibold))
             }
-            .buttonStyle(IconButtonStyle(color: .red))
+            .buttonStyle(CardIconButtonStyle(color: .red, isHovered: isHovered))
             .help("Aufgabe löschen")
-
-            if let next = task.column.next {
-                Button {
-                    withAnimation { store.move(task, to: next) }
-                } label: {
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 10, weight: .semibold))
-                }
-                .buttonStyle(IconButtonStyle(color: .green))
-                .help("Nach \(next.rawValue) verschieben")
-            }
         }
+        .opacity(isEditingNotes || isEditingTitle ? 0 : 1)
     }
 
     // MARK: - Notiz-Editor
@@ -163,16 +134,11 @@ struct TaskCardView: View {
                     .foregroundColor(.red)
                     .font(.system(size: 11))
                 }
-
                 Spacer()
-
-                Button("Abbrechen") {
-                    isEditingNotes = false
-                }
-                .buttonStyle(.plain)
-                .foregroundColor(.secondary)
-                .font(.system(size: 11))
-
+                Button("Abbrechen") { isEditingNotes = false }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.secondary)
+                    .font(.system(size: 11))
                 Button("Speichern") {
                     store.updateNotes(task, notes: notesDraft.trimmingCharacters(in: .whitespacesAndNewlines))
                     isEditingNotes = false
@@ -183,7 +149,7 @@ struct TaskCardView: View {
         }
     }
 
-    // MARK: - Kontextmenü (Rechtsklick)
+    // MARK: - Kontextmenü
 
     @ViewBuilder
     private var contextMenuItems: some View {
@@ -196,7 +162,7 @@ struct TaskCardView: View {
             withAnimation { isEditingNotes = true }
         }
         if let prev = task.column.previous {
-            Button("→ Nach \(prev.rawValue)") {
+            Button("← Nach \(prev.rawValue)") {
                 withAnimation { store.move(task, to: prev) }
             }
         }
@@ -212,16 +178,19 @@ struct TaskCardView: View {
     }
 }
 
-// MARK: - Kleiner Icon-Button-Style
+// MARK: - Icon-Button-Style (kompakt, Helligkeit reagiert auf Hover)
 
-struct IconButtonStyle: ButtonStyle {
+struct CardIconButtonStyle: ButtonStyle {
     let color: Color
+    let isHovered: Bool
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .frame(width: 20, height: 20)
-            .foregroundColor(color)
-            .background(color.opacity(configuration.isPressed ? 0.25 : 0.12))
-            .clipShape(Circle())
+            .font(.system(size: 9, weight: .semibold))
+            .frame(width: 16, height: 16)
+            .foregroundColor(color.opacity(isHovered ? 0.85 : 0.35))
+            .background(
+                Circle().fill(color.opacity(configuration.isPressed ? 0.22 : (isHovered ? 0.10 : 0.0)))
+            )
     }
 }

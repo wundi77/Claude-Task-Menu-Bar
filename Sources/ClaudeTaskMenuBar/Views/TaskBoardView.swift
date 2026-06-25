@@ -4,6 +4,27 @@ import ServiceManagement
 struct TaskBoardView: View {
     @EnvironmentObject var store: TaskStore
 
+    // Fensterhöhe dynamisch: passt sich der längsten Spalte an,
+    // gedeckelt auf 50 % der sichtbaren Bildschirmhöhe.
+    private var boardHeight: CGFloat {
+        let maxCards = Task.Column.allCases
+            .map { store.tasks(in: $0).count }
+            .max() ?? 0
+
+        let headerH: CGFloat = 38   // Spaltenheader inkl. Padding
+        let footerH: CGFloat = 36   // Footer inkl. Padding
+        let cardH:   CGFloat = 42   // Karte (einzeilig) inkl. Spacing
+        let colPad:  CGFloat = 20   // Innenabstand oben + unten in der Spalte
+
+        let contentH = maxCards > 0
+            ? CGFloat(maxCards) * cardH + colPad
+            : colPad
+
+        let ideal   = headerH + contentH + footerH
+        let screenH = NSScreen.main?.visibleFrame.height ?? 800
+        return min(max(ideal, 160), screenH * 0.5)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
@@ -18,8 +39,9 @@ struct TaskBoardView: View {
             Divider()
             boardFooter
         }
-        .frame(width: 720, height: 490)
+        .frame(width: 720, height: boardHeight)
         .background(Color(NSColor.windowBackgroundColor))
+        .animation(.easeInOut(duration: 0.2), value: boardHeight)
     }
 
     private var boardFooter: some View {
@@ -43,8 +65,6 @@ struct LoginItemToggle: View {
     @State private var isEnabled: Bool = (SMAppService.mainApp.status == .enabled)
     @State private var errorMessage: String?
 
-    // Nur aus /Programme heraus darf sich die App als Login-Item eintragen.
-    // Aus DerivedData/Debug heraus würde macOS ein Terminal öffnen.
     private var isInstalledProperly: Bool {
         let path = Bundle.main.bundlePath
         guard path.hasSuffix(".app") else { return false }

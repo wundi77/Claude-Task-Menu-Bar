@@ -7,10 +7,10 @@ Eine native macOS Menu-Bar-App im Trello-Stil — kein Dock-Icon, lebt nur in de
 │  ToDo  (2)  +  │  Doing  (1)  +  │  Done  (1)  +        │
 │────────────────│─────────────────│──────────────────────│
 │ ┌────────────┐ │ ┌─────────────┐ │ ┌──────────────────┐ │
-│ │ Aufgabe A  │ │ │ Aufgabe C  ← │ │ │ Aufgabe D  ← 🗑 │ │
+│ │ Aufgabe A ✏📝🗑│ │ Aufgabe C ✏📝🗑│ │ Aufgabe D ✏📝🗑 │ │
 │ └────────────┘ │ └─────────────┘ │ └──────────────────┘ │
 │ ┌────────────┐ │                 │                       │
-│ │ Aufgabe B →│ │                 │                       │
+│ │ Aufgabe B ✏📝🗑│                 │                       │
 │ └────────────┘ │                 │                       │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -68,13 +68,17 @@ open /Applications/ClaudeTaskMenuBar.app
 |---|---|
 | Board öffnen | Klick auf das Symbol in der Menüleiste |
 | Aufgabe hinzufügen | **+** in der Spaltenüberschrift |
-| Aufgabe löschen | Hover über Karte → 🗑 |
-| Aufgabe verschieben | Hover über Karte → ← / → **oder** Drag & Drop zwischen Spalten |
-| Titel bearbeiten | Hover über Karte → Bleistift-Icon **oder** Rechtsklick → Bearbeiten |
-| Notiz bearbeiten | Karte aufklappen → Notizfeld anklicken |
+| Aufgabe löschen | 🗑 rechts auf der Karte |
+| Aufgabe verschieben | Drag & Drop zwischen Spalten **oder** Rechtsklick → Verschieben |
+| Titel bearbeiten | ✏ rechts auf der Karte **oder** Rechtsklick → Bearbeiten |
+| Notiz bearbeiten | 📝 rechts auf der Karte **oder** Rechtsklick → Notiz |
 | Kontextmenü | Rechtsklick auf eine Karte |
 | Hinzufügen abbrechen | `Escape` |
 | Hinzufügen bestätigen | `Return` (einzelne Zeile) / `⌘Return` (mehrzeilig) |
+
+## Fensterhöhe
+
+Das Fenster passt sich automatisch der Anzahl der Karten an (längste Spalte bestimmt die Höhe). Ab 50 % der Bildschirmhöhe wird stattdessen ein Scrollbalken angezeigt.
 
 ## App-Icon
 
@@ -95,8 +99,8 @@ Sources/ClaudeTaskMenuBar/
 ├── Models/
 │   └── TaskModel.swift          # Task-Struct + TaskStore (ObservableObject)
 └── Views/
-    ├── TaskBoardView.swift      # Haupt-Board (3 Spalten nebeneinander)
+    ├── TaskBoardView.swift      # Haupt-Board (3 Spalten, dynamische Höhe)
     ├── ColumnView.swift         # Einzelne Spalte mit Drag-Drop-Ziel
-    ├── TaskCardView.swift       # Aufgaben-Karte mit Hover-Controls
+    ├── TaskCardView.swift       # Aufgaben-Karte mit immer sichtbaren Icons
     └── AddTaskView.swift        # Formular zum Hinzufügen einer Aufgabe
 ```
