@@ -12,8 +12,11 @@ struct ColumnView: View {
     let column: Task.Column
     @EnvironmentObject var store: TaskStore
 
-    @State private var isAddingTask  = false
+    @State private var isAddingTask   = false
     @State private var isDropTargeted = false
+    @State private var isEditingTitle = false
+    @State private var titleDraft     = ""
+    @FocusState private var titleFocused: Bool
 
     private var accentColor: Color {
         switch column {
@@ -45,7 +48,7 @@ struct ColumnView: View {
         }
     }
 
-    // MARK: - Subviews
+    // MARK: - Header
 
     private var columnHeader: some View {
         HStack {
@@ -53,11 +56,28 @@ struct ColumnView: View {
                 .fill(accentColor)
                 .frame(width: 8, height: 8)
 
-            Text(column.rawValue)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(accentColor)
-
-            Spacer()
+            // Inline-editierbarer Spaltenname
+            if isEditingTitle {
+                TextField("Spaltenname", text: $titleDraft)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(accentColor)
+                    .textFieldStyle(.plain)
+                    .focused($titleFocused)
+                    .onAppear { titleFocused = true }
+                    .onSubmit { saveTitle() }
+                    .onExitCommand { isEditingTitle = false }
+                    .frame(maxWidth: .infinity)
+            } else {
+                Text(store.title(for: column))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(accentColor)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onTapGesture {
+                        titleDraft = store.title(for: column)
+                        withAnimation { isEditingTitle = true }
+                    }
+                    .help("Klicken um Spaltenname zu ändern")
+            }
 
             let count = store.tasks(in: column).count
             Text("\(count)")
@@ -83,6 +103,16 @@ struct ColumnView: View {
         .background(accentColor.opacity(0.07))
     }
 
+    private func saveTitle() {
+        let trimmed = titleDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            store.updateColumnTitle(column, title: trimmed)
+        }
+        isEditingTitle = false
+    }
+
+    // MARK: - Task-Liste
+
     private var taskList: some View {
         ScrollView(.vertical, showsIndicators: true) {
             LazyVStack(spacing: 6) {
@@ -98,7 +128,6 @@ struct ColumnView: View {
             .padding(10)
             .animation(.spring(response: 0.3, dampingFraction: 0.8), value: store.tasks)
             .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isAddingTask)
-            // Tatsächliche Inhaltshoehe messen und nach oben melden
             .background(
                 GeometryReader { geo in
                     Color.clear.preference(

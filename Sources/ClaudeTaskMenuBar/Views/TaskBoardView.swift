@@ -4,7 +4,6 @@ import ServiceManagement
 struct TaskBoardView: View {
     @EnvironmentObject var store: TaskStore
 
-    // Gemessene Inhaltshoehe der laengsten Spalte (wird live aktualisiert)
     @State private var columnContentHeight: CGFloat = 100
 
     private let headerH: CGFloat = 38
@@ -30,10 +29,9 @@ struct TaskBoardView: View {
             Divider()
             boardFooter
         }
-        .frame(width: 720, height: windowHeight)
+        .frame(width: 1440, height: windowHeight)
         .background(Color(NSColor.windowBackgroundColor))
         .animation(.easeInOut(duration: 0.2), value: windowHeight)
-        // Hoehe der laengsten Spalte empfangen
         .onPreferenceChange(ColumnContentHeightKey.self) { h in
             columnContentHeight = h
         }

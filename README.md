@@ -2,27 +2,12 @@
 
 Eine native macOS Menu-Bar-App im Trello-Stil — kein Dock-Icon, lebt nur in der Menüleiste.
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  ToDo  (2)  +  │  Doing  (1)  +  │  Done  (1)  +        │
-│────────────────│─────────────────│──────────────────────│
-│ ┌────────────┐ │ ┌─────────────┐ │ ┌──────────────────┐ │
-│ │ Aufgabe A ✏📝🗑│ │ Aufgabe C ✏📝🗑│ │ Aufgabe D ✏📝🗑 │ │
-│ └────────────┘ │ └─────────────┘ │ └──────────────────┘ │
-│ ┌────────────┐ │                 │                       │
-│ │ Aufgabe B ✏📝🗑│                 │                       │
-│ └────────────┘ │                 │                       │
-└──────────────────────────────────────────────────────────┘
-```
-
 ## Anforderungen
 
 - macOS 13 Ventura oder neuer
-- Xcode 15 oder neuer (bzw. Xcode Command Line Tools)
+- Xcode Command Line Tools: `xcode-select --install`
 
 ## Installation & Start
-
-### Option 1 — Kommandozeile (empfohlen, inkl. App-Icon)
 
 ```bash
 git clone https://github.com/wundi77/claude-task-menu-bar.git
@@ -32,24 +17,6 @@ chmod +x build-app.sh
 cp -r ClaudeTaskMenuBar.app /Applications/
 open /Applications/ClaudeTaskMenuBar.app
 ```
-
-Das Skript kompiliert die App, generiert automatisch ein modernes App-Icon und erstellt ein vollständiges `.app`-Bundle.
-
-### Option 2 — Xcode
-
-1. Repository klonen:
-   ```bash
-   git clone https://github.com/wundi77/claude-task-menu-bar.git
-   cd claude-task-menu-bar
-   ```
-2. `Package.swift` in Xcode öffnen:
-   ```bash
-   open Package.swift
-   ```
-3. Target **ClaudeTaskMenuBar** auswählen, **My Mac** als Ziel wählen
-4. **Run** (⌘R) drücken
-
-> **Hinweis:** Beim ersten Start fragt macOS nach Berechtigungen. Einfach bestätigen.
 
 ## Update
 
@@ -72,35 +39,35 @@ open /Applications/ClaudeTaskMenuBar.app
 | Aufgabe verschieben | Drag & Drop zwischen Spalten **oder** Rechtsklick → Verschieben |
 | Titel bearbeiten | ✏ rechts auf der Karte **oder** Rechtsklick → Bearbeiten |
 | Notiz bearbeiten | 📝 rechts auf der Karte **oder** Rechtsklick → Notiz |
+| Spaltenname ändern | Klick auf den Spaltentitel im Header |
 | Kontextmenü | Rechtsklick auf eine Karte |
 | Hinzufügen abbrechen | `Escape` |
 | Hinzufügen bestätigen | `Return` (einzelne Zeile) / `⌘Return` (mehrzeilig) |
 
-## Fensterhöhe
+## Fenstergröße
 
-Das Fenster passt sich automatisch der Anzahl der Karten an (längste Spalte bestimmt die Höhe). Ab 50 % der Bildschirmhöhe wird stattdessen ein Scrollbalken angezeigt.
+Das Fenster ist **1440 px breit** (ca. doppelt so breit wie zuvor). Die Höhe passt sich automatisch dem Inhalt an — ab 50 % der Bildschirmhöhe erscheint ein Scrollbalken.
 
 ## App-Icon
 
-Das Icon wird beim Build automatisch generiert (`create_icon.swift`):
-- Modernes, abgerundetes Quadrat im Apple-Stil
-- Blau-Indigo-Verlauf
+Wird beim Build automatisch generiert (`create_icon.swift`):
+- Abgerundetes Quadrat im Apple-Stil, Blau-Indigo-Verlauf
 - Drei weiße Kanban-Spalten mit Karten
 
 ## Datenspeicherung
 
-Aufgaben werden automatisch in `UserDefaults` gespeichert und beim nächsten Start wiederhergestellt.
+Aufgaben und Spaltennamen werden automatisch in `UserDefaults` gespeichert.
 
 ## Projektstruktur
 
 ```
 Sources/ClaudeTaskMenuBar/
-├── ClaudeTaskMenuBarApp.swift   # App-Einstiegspunkt, MenuBarExtra
+├── ClaudeTaskMenuBarApp.swift
 ├── Models/
-│   └── TaskModel.swift          # Task-Struct + TaskStore (ObservableObject)
+│   └── TaskModel.swift          # Task-Struct + TaskStore (inkl. columnTitles)
 └── Views/
-    ├── TaskBoardView.swift      # Haupt-Board (3 Spalten, dynamische Höhe)
-    ├── ColumnView.swift         # Einzelne Spalte mit Drag-Drop-Ziel
-    ├── TaskCardView.swift       # Aufgaben-Karte mit immer sichtbaren Icons
-    └── AddTaskView.swift        # Formular zum Hinzufügen einer Aufgabe
+    ├── TaskBoardView.swift      # Board (1440 px breit, dynamische Höhe)
+    ├── ColumnView.swift         # Spalte mit editierbarem Titel
+    ├── TaskCardView.swift       # Karte mit immer sichtbaren Icons
+    └── AddTaskView.swift
 ```
